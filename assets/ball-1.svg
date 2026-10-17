@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs><radialGradient id="b" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#f7dc6f"/><stop offset="1" stop-color="#b7950b"/></radialGradient></defs>
+  <circle cx="50" cy="50" r="46" fill="url(#b)" stroke="#b7950b" stroke-width="2"/>
+  <text x="50" y="62" font-size="26" font-weight="800" text-anchor="middle" fill="#7d6608" font-family="'Hiragino Sans',sans-serif">1等</text>
+</svg>

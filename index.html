@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e4fa8">
+<title>在席ガラポン プロト</title>
+<style>
+  :root {
+    --primary: #1e4fa8;
+    --primary-dark: #173f88;
+    --text: #222;
+    --muted: #555;
+    --line: #8a8a8a;
+    --bg: #f5f5f5;
+    --footer: #ebebeb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  header {
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .icon-btn { background: none; border: 0; color: inherit; padding: 4px; cursor: pointer; display: flex; }
+  .brand { font-size: 24px; letter-spacing: .5px; flex: 1; }
+  .user-box { text-align: right; font-size: 14px; line-height: 1.4; min-width: 0; }
+  .user-box .email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+  .status { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+  .status .dot { width: 12px; height: 12px; border-radius: 50%; background: #6cc24a; border: 1px solid #fff; }
+
+  /* 本体 */
+  main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 32px 24px 40px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h1 { font-size: 17px; font-weight: 500; text-align: center; margin: 24px 0 20px; }
+
+  .field { display: grid; grid-template-columns: 84px 1fr; align-items: end; gap: 12px; margin-bottom: 18px; }
+  .field label { text-align: right; font-size: 15px; padding-bottom: 6px; }
+  .field input, .field .value {
+    font: inherit; font-size: 15px; color: var(--text);
+    border: 0; border-bottom: 1px solid var(--line);
+    background: transparent; padding: 6px 0; width: 100%; min-width: 0;
+    border-radius: 0; outline: none;
+  }
+  .field input:focus { border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+  .field .value { word-break: break-all; }
+
+  .actions { margin-top: 40px; display: grid; gap: 14px; }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font: inherit; font-size: 18px; height: 56px; border-radius: 4px; cursor: pointer;
+    border: 2px solid var(--primary); transition: background .15s, transform .05s;
+  }
+  .btn:active { transform: scale(.99); }
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { background: #fff; color: var(--primary); }
+  .btn-outline:hover { background: #eef3fc; }
+
+  /* 完了画面 */
+  .done { text-align: center; padding-top: 16px; }
+  .done h2 { font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+  .done .sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+  .summary { background: #fff; border-radius: 6px; padding: 16px 20px; text-align: left; font-size: 14px; margin-bottom: 28px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .summary dl { display: grid; grid-template-columns: 84px 1fr; gap: 10px 12px; margin: 0; }
+  .summary dt { color: var(--muted); }
+  .summary dd { margin: 0; word-break: break-all; }
+
+  /* ガラポン */
+  .lottery { text-align: center; padding-top: 8px; }
+  .lottery h2 { font-size: 20px; margin: 0 0 4px; }
+  .lottery .sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .garapon { position: relative; width: 260px; height: 260px; margin: 0 auto 20px; }
+  .garapon .stand { position: absolute; inset: 0; width: 100%; }
+  .garapon .drum { position: absolute; left: 45px; top: 0; width: 170px; }
+  .garapon .handle { position: absolute; left: 130px; top: 85px; width: 0; height: 0; }
+  .garapon .handle::before { content: ""; position: absolute; left: 0; top: -4px; width: 70px; height: 8px; background: #7f8c8d; border-radius: 4px; }
+  .garapon .handle::after { content: ""; position: absolute; left: 62px; top: -10px; width: 20px; height: 20px; background: #2c3e50; border-radius: 50%; }
+  .garapon.spin .drum, .garapon.spin .handle { animation: spin .5s linear infinite; }
+  .garapon .drum { transform-origin: 50% 50%; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .garapon .ball { position: absolute; left: 170px; top: 192px; width: 30px; opacity: 0; }
+  .garapon .ball.drop { animation: drop 1s cubic-bezier(.3,.6,.5,1) forwards; }
+  @keyframes drop {
+    0% { opacity: 1; transform: translate(-30px, -90px) scale(.6); }
+    50% { transform: translate(0, 0) scale(1); }
+    70% { transform: translate(6px, -18px); }
+    85% { transform: translate(10px, 0); }
+    100% { opacity: 1; transform: translate(12px, 0) scale(1.1); }
+  }
+  .lottery .caption { min-height: 24px; font-weight: 600; color: var(--primary); margin-bottom: 16px; }
+  .btn-spin { width: 100%; background: linear-gradient(#f39c12, #e67e22); border-color: #d35400; color: #fff; font-weight: 700; box-shadow: 0 4px 0 #a04000; }
+  .btn-spin:disabled { opacity: .6; box-shadow: none; transform: translateY(4px); }
+
+  /* 当選 */
+  .prize { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 16px; }
+  .prize img { width: 64px; animation: bounce 1s ease-in-out infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+  .prize .rank { font-size: 40px; font-weight: 900; color: #c0392b; line-height: 1; text-align: left; }
+  .prize .cheer { font-size: 16px; font-weight: 700; color: #e67e22; margin-top: 4px; text-align: left; }
+  .coupon {
+    position: relative; background: #fffdf5; border: 3px solid #e67e22; border-radius: 12px;
+    padding: 16px 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    animation: pop .6s cubic-bezier(.2,1.6,.4,1);
+  }
+  @keyframes pop { from { transform: scale(.5) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .coupon::before, .coupon::after { content: ""; position: absolute; top: 50%; width: 22px; height: 22px; background: var(--bg); border: 3px solid #e67e22; border-radius: 50%; transform: translateY(-50%); }
+  .coupon::before { left: -14px; clip-path: inset(0 0 0 50%); }
+  .coupon::after { right: -14px; clip-path: inset(0 50% 0 0); }
+  .coupon .label { font-size: 14px; letter-spacing: 2px; color: #a04000; font-weight: 700; }
+  .coupon .lunch { width: 150px; margin: 6px auto 0; display: block; }
+  .coupon .amount { font-size: 44px; font-weight: 900; color: #c0392b; line-height: 1.1; }
+  .coupon .amount small { font-size: 22px; }
+  .coupon hr { border: 0; border-top: 2px dashed #f0b27a; margin: 14px 0; }
+  .coupon .qr { width: 168px; height: 168px; margin: 0 auto; background: #fff; padding: 6px; border-radius: 6px; }
+  .coupon .qr svg { width: 100%; height: 100%; display: block; }
+  .coupon .meta { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+  .coupon .note { font-size: 11px; color: #c0392b; margin-top: 4px; }
+
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+  /* フッター */
+  footer { background: var(--footer); padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); font-size: 14px; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 8px 0; }
+  footer nav a { color: var(--primary); text-decoration: none; padding: 0 12px; border-left: 1px solid #999; }
+  footer nav a:first-child { border-left: 0; padding-left: 0; }
+  footer .copy { color: #888; text-align: center; margin-top: 16px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <button class="icon-btn" aria-label="メニュー">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </button>
+    <div class="brand">SEATouch</div>
+    <div class="user-box">
+      <div class="email" id="headerUser"></div>
+      <div class="status">
+        <span class="dot"></span>テレワーク
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <canvas id="confetti"></canvas>
+
+  <main>
+    <!-- 入力画面 -->
+    <section class="screen active" id="screen-form">
+      <h1>在席退席登録</h1>
+      <div class="field">
+        <label for="card">カード番号</label>
+        <input id="card" type="text" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>ユーザーID</label>
+        <div class="value" id="userId"></div>
+      </div>
+      <div class="field">
+        <label for="comment">コメント</label>
+        <input id="comment" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="datetime">日時</label>
+        <input id="datetime" type="datetime-local">
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnIn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z"/></svg>
+          在席登録
+        </button>
+        <button class="btn btn-outline" id="btnOut">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8v-2H4V5z"/></svg>
+          退席登録
+        </button>
+      </div>
+    </section>
+
+    <!-- ガラポン -->
+    <section class="screen" id="screen-lottery">
+      <div class="lottery">
+        <h2>在席登録ありがとうございます！</h2>
+        <p class="sub">ガラポンを回して社員食堂の割引券をゲットしよう</p>
+        <div class="garapon" id="garapon">
+          <img class="stand" src="assets/garapon-stand.svg" alt="">
+          <img class="drum" src="assets/garapon-drum.svg" alt="ガラポン">
+          <div class="handle"></div>
+          <img class="ball" id="ball" src="" alt="">
+        </div>
+        <div class="caption" id="caption"></div>
+        <button class="btn btn-spin" id="btnSpin">ガラポンを回す！</button>
+      </div>
+    </section>
+
+    <!-- 完了画面 -->
+    <section class="screen" id="screen-done">
+      <div class="done">
+        <h2 id="doneTitle">在席登録が完了しました</h2>
+        <div id="prizeArea">
+          <div class="prize">
+            <img id="prizeBall" src="" alt="">
+            <div>
+              <div class="rank" id="prizeRank"></div>
+              <div class="cheer" id="prizeCheer"></div>
+            </div>
+          </div>
+          <div class="coupon">
+            <div class="label">社員食堂 割引券</div>
+            <img class="lunch" src="assets/lunch.svg" alt="定食">
+            <div class="amount"><span id="couponAmount"></span><small>円引き</small></div>
+            <hr>
+            <div class="qr" id="qr"></div>
+            <div class="meta">
+              クーポン番号：<span id="couponCode"></span><br>
+              有効期限：<span id="couponExpire"></span>
+            </div>
+            <div class="note">※プロトタイプ用のサンプルです。実際には使えません</div>
+          </div>
+        </div>
+        <div class="summary">
+          <dl>
+            <dt>ユーザーID</dt><dd id="sumUser"></dd>
+            <dt>日時</dt><dd id="sumTime"></dd>
+            <dt>コメント</dt><dd id="sumComment"></dd>
+          </dl>
+        </div>
+        <button class="btn btn-outline" id="btnBack" style="width:100%">戻る</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <nav>
+      <a href="#">利用規約</a>
+      <a href="#">プライバシーポリシー</a>
+      <a href="#">ウェブアクセシビリティ</a>
+    </nav>
+    <div class="copy">Prototype — 実際の登録は行われません</div>
+  </footer>
+
+<script src="lib/qrcode.min.js"></script>
+<script>
+  const USER_ID = 'taro.yamada@example.com';
+  const $ = (id) => document.getElementById(id);
+
+  $('headerUser').textContent = USER_ID;
+  $('userId').textContent = USER_ID;
+
+  function nowLocal() {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
+  $('datetime').value = nowLocal();
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    window.scrollTo(0, 0);
+  }
+
+  // 等級ごとの割引額と当選確率（%）
+  const PRIZES = [
+    { rank: 1, amount: 500, weight: 5,  caption: '大当たり〜！！' },
+    { rank: 2, amount: 300, weight: 15, caption: 'おめでとうございます！' },
+    { rank: 3, amount: 100, weight: 35, caption: 'あたり！' },
+    { rank: 4, amount: 50,  weight: 45, caption: 'あたり！' },
+  ];
+  function drawPrize() {
+    let r = Math.random() * PRIZES.reduce((a, p) => a + p.weight, 0);
+    for (const p of PRIZES) { if ((r -= p.weight) < 0) return p; }
+    return PRIZES[PRIZES.length - 1];
+  }
+
+  function fillSummary(kind) {
+    const dt = $('datetime').value || nowLocal();
+    $('doneTitle').textContent = `${kind}登録が完了しました`;
+    $('sumUser').textContent = USER_ID;
+    $('sumTime').textContent = dt.replace('T', ' ').replace(/-/g, '/');
+    $('sumComment').textContent = $('comment').value || '—';
+  }
+
+  function resetLottery() {
+    $('garapon').classList.remove('spin');
+    $('ball').classList.remove('drop');
+    $('caption').textContent = '';
+    $('btnSpin').disabled = false;
+  }
+
+  $('btnIn').addEventListener('click', () => {
+    fillSummary('在席');
+    resetLottery();
+    show('screen-lottery');
+  });
+  $('btnOut').addEventListener('click', () => {
+    fillSummary('退席');
+    $('prizeArea').hidden = true;
+    show('screen-done');
+  });
+
+  $('btnSpin').addEventListener('click', () => {
+    const prize = drawPrize();
+    $('btnSpin').disabled = true;
+    $('caption').textContent = 'ガラガラガラ…';
+    $('garapon').classList.add('spin');
+    setTimeout(() => {
+      $('garapon').classList.remove('spin');
+      $('ball').src = `assets/ball-${prize.rank}.svg`;
+      $('ball').classList.add('drop');
+      $('caption').textContent = 'コロン！';
+    }, 2000);
+    setTimeout(() => showPrize(prize), 3300);
+  });
+
+  function randomCode() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 8 }, () => c[Math.floor(Math.random() * c.length)]).join('');
+  }
+
+  function showPrize(prize) {
+    const today = new Date();
+    const ymd = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+    const code = randomCode();
+    $('prizeArea').hidden = false;
+    $('prizeBall').src = `assets/ball-${prize.rank}.svg`;
+    $('prizeRank').textContent = `${prize.rank}等`;
+    $('prizeCheer').textContent = prize.caption;
+    $('couponAmount').textContent = prize.amount;
+    $('couponCode').textContent = code;
+    $('couponExpire').textContent = `${ymd} 本日限り`;
+
+    const qr = qrcode(0, 'M');
+    qr.addData(`CAFETERIA-COUPON;CODE=${code};DISCOUNT=${prize.amount};EXPIRE=${ymd.replace(/\//g, '')};SAMPLE`);
+    qr.make();
+    $('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+
+    show('screen-done');
+    confetti(prize.rank === 1 ? 260 : prize.rank === 2 ? 160 : 90);
+  }
+
+  // 紙吹雪
+  function confetti(count) {
+    const cv = $('confetti'), ctx = cv.getContext('2d');
+    cv.width = innerWidth; cv.height = innerHeight;
+    const colors = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#e67e22'];
+    const ps = Array.from({ length: count }, () => ({
+      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5,
+      w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+      vy: 2 + Math.random() * 3, vx: -1.5 + Math.random() * 3,
+      r: Math.random() * Math.PI, vr: -.2 + Math.random() * .4,
+      c: colors[Math.floor(Math.random() * colors.length)],
+    }));
+    const start = performance.now();
+    (function frame(t) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (const p of ps) {
+        p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r)));
+        ctx.restore();
+      }
+      if (t - start < 4000) requestAnimationFrame(frame);
+      else ctx.clearRect(0, 0, cv.width, cv.height);
+    })(start);
+  }
+
+  $('btnBack').addEventListener('click', () => {
+    $('datetime').value = nowLocal();
+    show('screen-form');
+  });
+</script>
+</body>
+</html>
